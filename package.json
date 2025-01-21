@@ -26,5 +26,9 @@
         "@types/vscode": "^1.60.0",
         "@types/node": "^14.x",
         "typescript": "^4.x"
-    }
+    },
+    "files": [
+        "out/**/*",
+        "src/data/**/*"
+    ]
 } 

@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
-import { Song, getRandomSong } from './songDatabase';
+import { Song, getRandomSong, loadSongs } from './songDatabase';
 
 export function activate(context: vscode.ExtensionContext) {
+    // 加载歌曲数据
+    loadSongs(context);
+    
     let currentGame: {
         song: Song;
         maskedName: string;
