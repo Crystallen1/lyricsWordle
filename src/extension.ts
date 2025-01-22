@@ -69,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
                         currentGame.maskedArtist = revealChar(currentGame.song.artist, char, currentGame.guessedChars);
                         currentGame.maskedLyrics = revealChar(currentGame.song.lyrics, char, currentGame.guessedChars);
 
-                        if (!currentGame.maskedName.includes('_')) {
+                        if (!currentGame.maskedName.includes('□')) {
                             // 显示完整信息
                             currentGame.maskedName = currentGame.song.name;
                             currentGame.maskedArtist = currentGame.song.artist;
@@ -94,28 +94,75 @@ export function activate(context: vscode.ExtensionContext) {
         function updateGameView() {
             if (!currentGame) return;
             
+            const formatText = (text: string) => text.replace(/\n/g, '<br>').trim();
+            
             panel.webview.html = `
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <style>
-                        body { padding: 20px; }
-                        .game-container { max-width: 600px; margin: 0 auto; }
-                        .input-container { margin: 20px 0; }
-                        input { padding: 5px; font-size: 16px; }
-                        button { padding: 5px 10px; margin-left: 10px; }
-                        .masked-text { font-size: 18px; letter-spacing: 2px; }
+                        body { 
+                            padding: 20px; 
+                            background-color: #1e1e1e;
+                            color: #ffffff;
+                        }
+                        .game-container { 
+                            max-width: 800px; 
+                            margin: 0 auto; 
+                        }
+                        .input-container { 
+                            margin: 20px 0; 
+                        }
+                        input { 
+                            padding: 5px; 
+                            font-size: 16px;
+                            background-color: #2d2d2d;
+                            color: #ffffff;
+                            border: 1px solid #3d3d3d;
+                        }
+                        button { 
+                            padding: 5px 10px; 
+                            margin-left: 10px;
+                            background-color: #0e639c;
+                            color: white;
+                            border: none;
+                            cursor: pointer;
+                        }
+                        button:hover {
+                            background-color: #1177bb;
+                        }
+                        .masked-text { 
+                            font-size: 18px; 
+                            line-height: 1.6;
+                            white-space: pre-wrap;
+                        }
                         .next-button { 
                             display: block; 
                             margin: 20px 0;
                             padding: 10px 20px;
-                            background-color: #007acc;
+                            background-color: #0e639c;
                             color: white;
                             border: none;
                             cursor: pointer;
                         }
                         .next-button:hover {
-                            background-color: #005999;
+                            background-color: #1177bb;
+                        }
+                        .lyrics-container {
+                            margin: 20px 0;
+                            padding: 15px;
+                            background-color: #2d2d2d;
+                            border-radius: 5px;
+                            border: 1px solid #3d3d3d;
+                            text-align: left;
+                        }
+                        .lyrics-text {
+                            margin: 0;
+                            padding: 0;
+                            line-height: 1.6;
+                        }
+                        h2 {
+                            color: #cccccc;
                         }
                     </style>
                 </head>
@@ -126,7 +173,11 @@ export function activate(context: vscode.ExtensionContext) {
                             <p>歌曲编号：${currentGame.song.id}</p>
                             <p>歌名：${currentGame.maskedName}</p>
                             <p>歌手：${currentGame.maskedArtist}</p>
-                            <p>歌词：${currentGame.maskedLyrics}</p>
+                            <div class="lyrics-container">
+                                <div class="lyrics-text">
+                                    ${formatText(currentGame.maskedLyrics)}
+                                </div>
+                            </div>
                             <p>已猜过的字：${Array.from(currentGame.guessedChars).join(', ')}</p>
                             <p>已猜字次数：${currentGame.guessCount}</p>
                         </div>
@@ -174,15 +225,15 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
-// 将文本转换为遮罩（下划线）
+// 将文本转换为遮罩（方框）
 function maskText(text: string): string {
-    return text.replace(/[\u4e00-\u9fa5a-zA-Z]/g, '_');
+    return text.replace(/[\u4e00-\u9fa5a-zA-Z]/g, '□');
 }
 
 // 显示已猜中的字符
 function revealChar(text: string, char: string, guessedChars: Set<string>): string {
     return text.split('').map(c => 
-        guessedChars.has(c) ? c : (c.match(/[\u4e00-\u9fa5a-zA-Z]/) ? '_' : c)
+        guessedChars.has(c) ? c : (c.match(/[\u4e00-\u9fa5a-zA-Z]/) ? '□' : c)
     ).join('');
 }
 
