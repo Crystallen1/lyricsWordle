@@ -28,7 +28,11 @@ export function getSongById(id: number): Song | undefined {
 }
 
 // 获取随机歌曲
-export function getRandomSong(): Song {
+export function getRandomSong(artist?: string): Song {
+    if (artist) {
+        const artistSongs = songs.filter(song => song.artist === artist);
+        return artistSongs[Math.floor(Math.random() * artistSongs.length)];
+    }
     return songs[Math.floor(Math.random() * songs.length)];
 }
 
@@ -36,3 +40,7 @@ export function getRandomSong(): Song {
 export function getSongCount(): number {
     return songs.length;
 } 
+
+export function getSongFromArtist(artist:string): string[] {
+    return songs.filter(song => song.artist === artist).map(song => song.name);
+}

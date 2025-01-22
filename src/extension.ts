@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
-import { Song, getRandomSong, loadSongs } from './songDatabase';
+import { Song, getRandomSong, loadSongs, getSongFromArtist } from './songDatabase';
 
 export function activate(context: vscode.ExtensionContext) {
     // 加载歌曲数据
     loadSongs(context);
+    
+    // 添加一个变量来存储当前选中的歌手
+    let currentArtist: string | undefined;
     
     let currentGame: {
         song: Song;
@@ -15,7 +18,9 @@ export function activate(context: vscode.ExtensionContext) {
     } | undefined;
 
     let disposable = vscode.commands.registerCommand('lyrics-guess.startGame', async () => {
-        const song = getRandomSong();
+        const song = currentArtist ? 
+            getRandomSong(currentArtist) : 
+            getRandomSong();
         
         currentGame = {
             song,
@@ -38,8 +43,10 @@ export function activate(context: vscode.ExtensionContext) {
         panel.webview.onDidReceiveMessage(
             async message => {
                 if (message.command === 'next') {
-                    // 获取新歌曲
-                    const song = getRandomSong();
+                    // 获取新歌曲，根据是否有选中歌手来决定
+                    const song = currentArtist ? 
+                        getRandomSong(currentArtist) : 
+                        getRandomSong();
                     
                     // 重置游戏状态
                     currentGame = {
@@ -95,6 +102,35 @@ export function activate(context: vscode.ExtensionContext) {
                     await vscode.window.showInformationMessage(
                         `答案是：${currentGame.song.name} - ${currentGame.song.artist}`
                     );
+                } else if (message.command === 'searchArtist') {
+                    const artist = message.text.trim();
+                    const songs = getSongFromArtist(artist);
+                    
+                    if (songs.length > 0) {
+                        currentArtist = artist;
+                        await vscode.window.showInformationMessage(
+                            `找到歌手 "${artist}" 的 ${songs.length} 首歌！`
+                        );
+                        // 立即切换到该歌手的一首歌
+                        const song = getRandomSong(currentArtist);
+                        currentGame = {
+                            song,
+                            maskedName: maskText(song.name),
+                            maskedArtist: maskText(song.artist),
+                            maskedLyrics: maskText(song.lyric),
+                            guessedChars: new Set(),
+                            guessCount: 0
+                        };
+                        updateGameView();
+                    } else {
+                        await vscode.window.showInformationMessage(
+                            `未找到歌手 "${artist}" 的歌曲`
+                        );
+                    }
+                } else if (message.command === 'clearArtist') {
+                    currentArtist = undefined;
+                    await vscode.window.showInformationMessage('已清除歌手筛选');
+                    
                 }
             },
             undefined,
@@ -174,11 +210,32 @@ export function activate(context: vscode.ExtensionContext) {
                         h2 {
                             color: #cccccc;
                         }
+                        .search-container {
+                            margin: 20px 0;
+                            display: flex;
+                            gap: 10px;
+                        }
+                        .current-artist {
+                            margin: 10px 0;
+                            color: #0e639c;
+                        }
                     </style>
                 </head>
                 <body>
                     <div class="game-container">
                         <h2>猜歌词游戏</h2>
+                        ${currentArtist ? 
+                            `<div class="current-artist">当前歌手：${currentArtist}</div>` : 
+                            ''
+                        }
+                        <div class="search-container">
+                            <input type="text" id="artistInput" placeholder="输入歌手名字">
+                            <button onclick="searchArtist()">搜索歌手</button>
+                            ${currentArtist ? 
+                                `<button onclick="clearArtist()">清除筛选</button>` : 
+                                ''
+                            }
+                        </div>
                         <div class="masked-text">
                             <p>歌曲编号：${currentGame.song.id}</p>
                             <p>歌名：${currentGame.maskedName}</p>
@@ -228,6 +285,24 @@ export function activate(context: vscode.ExtensionContext) {
                         function showAnswer() {
                             vscode.postMessage({
                                 command: 'showAnswer'
+                            });
+                        }
+
+                        function searchArtist() {
+                            const input = document.getElementById('artistInput');
+                            const artist = input.value.trim();
+                            if (artist) {
+                                vscode.postMessage({
+                                    command: 'searchArtist',
+                                    text: artist
+                                });
+                                input.value = '';
+                            }
+                        }
+                        
+                        function clearArtist() {
+                            vscode.postMessage({
+                                command: 'clearArtist'
                             });
                         }
                     </script>
