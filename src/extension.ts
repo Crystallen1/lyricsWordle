@@ -21,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
             song,
             maskedName: maskText(song.name),
             maskedArtist: maskText(song.artist),
-            maskedLyrics: maskText(song.lyrics),
+            maskedLyrics: maskText(song.lyric),
             guessedChars: new Set(),
             guessCount: 0
         };
@@ -46,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
                         song,
                         maskedName: maskText(song.name),
                         maskedArtist: maskText(song.artist),
-                        maskedLyrics: maskText(song.lyrics),
+                        maskedLyrics: maskText(song.lyric),
                         guessedChars: new Set(),
                         guessCount: 0
                     };
@@ -63,17 +63,17 @@ export function activate(context: vscode.ExtensionContext) {
 
                     if (currentGame.song.name.includes(char) || 
                         currentGame.song.artist.includes(char) || 
-                        currentGame.song.lyrics.includes(char)) {
+                        currentGame.song.lyric.includes(char)) {
                         
                         currentGame.maskedName = revealChar(currentGame.song.name, char, currentGame.guessedChars);
                         currentGame.maskedArtist = revealChar(currentGame.song.artist, char, currentGame.guessedChars);
-                        currentGame.maskedLyrics = revealChar(currentGame.song.lyrics, char, currentGame.guessedChars);
+                        currentGame.maskedLyrics = revealChar(currentGame.song.lyric, char, currentGame.guessedChars);
 
                         if (!currentGame.maskedName.includes('□')) {
                             // 显示完整信息
                             currentGame.maskedName = currentGame.song.name;
                             currentGame.maskedArtist = currentGame.song.artist;
-                            currentGame.maskedLyrics = currentGame.song.lyrics;
+                            currentGame.maskedLyrics = currentGame.song.lyric;
                             updateGameView();
                             
                             await vscode.window.showInformationMessage(
@@ -85,6 +85,16 @@ export function activate(context: vscode.ExtensionContext) {
                         vscode.window.showInformationMessage(`字符 "${char}" 不存在！`);
                     }
                     updateGameView();
+                } else if (message.command === 'showAnswer' && currentGame) {
+                    // 显示完整答案
+                    currentGame.maskedName = currentGame.song.name;
+                    currentGame.maskedArtist = currentGame.song.artist;
+                    currentGame.maskedLyrics = currentGame.song.lyric;
+                    updateGameView();
+                    
+                    await vscode.window.showInformationMessage(
+                        `答案是：${currentGame.song.name} - ${currentGame.song.artist}`
+                    );
                 }
             },
             undefined,
@@ -185,6 +195,7 @@ export function activate(context: vscode.ExtensionContext) {
                             <input type="text" id="guessInput" maxlength="1" placeholder="输入一个汉字">
                             <button onclick="submitGuess()">猜！</button>
                         </div>
+                        <button class="next-button" onclick="showAnswer()">显示答案</button>
                         <button class="next-button" onclick="nextSong()">下一首歌</button>
                     </div>
                     <script>
@@ -211,6 +222,12 @@ export function activate(context: vscode.ExtensionContext) {
                         function nextSong() {
                             vscode.postMessage({
                                 command: 'next'
+                            });
+                        }
+
+                        function showAnswer() {
+                            vscode.postMessage({
+                                command: 'showAnswer'
                             });
                         }
                     </script>

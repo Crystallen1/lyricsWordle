@@ -6,7 +6,7 @@ export interface Song {
     id: number;
     name: string;
     artist: string;
-    lyrics: string;
+    lyric: string;
 }
 
 let songs: Song[] = [];
