@@ -1,7 +1,6 @@
 # 编译输出
 out/
 dist/
-*.vsix
 
 # 依赖目录
 node_modules/
