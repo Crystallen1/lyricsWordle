@@ -29,6 +29,7 @@
     },
     "files": [
         "out/**/*",
+        "src/template.html",
         "src/data/**/*"
     ]
 } 
