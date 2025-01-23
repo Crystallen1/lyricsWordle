@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+        .game-container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+        }
+        .input-container { 
+            margin: 20px 0; 
+        }
+        input { 
+            padding: 5px; 
+            font-size: 16px;
+            background-color: #2d2d2d;
+            color: #ffffff;
+            border: 1px solid #3d3d3d;
+        }
+        button { 
+            padding: 5px 10px; 
+            margin-left: 10px;
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #1177bb;
+        }
+        .masked-text { 
+            font-size: 18px; 
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .next-button { 
+            display: block; 
+            margin: 20px 0;
+            padding: 10px 20px;
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .next-button:hover {
+            background-color: #1177bb;
+        }
+        .lyrics-container {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #2d2d2d;
+            border-radius: 5px;
+            border: 1px solid #3d3d3d;
+            text-align: left;
+        }
+        .lyrics-text {
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        h2 {
+            color: #cccccc;
+        }
+        .search-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .current-artist {
+            margin: 10px 0;
+            color: #0e639c;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h2>猜歌词游戏</h2>
+        {{currentArtist}}
+        <div class="search-container">
+            <input type="text" id="artistInput" placeholder="输入歌手名字">
+            <button onclick="searchArtist()">搜索歌手</button>
+            {{clearArtistButton}}
+        </div>
+        <div class="masked-text">
+            <p>歌曲编号：{{songId}}</p>
+            <p>歌名：{{maskedName}}</p>
+            <p>歌手：{{maskedArtist}}</p>
+            <div class="lyrics-container">
+                <div class="lyrics-text">
+                    {{maskedLyrics}}
+                </div>
+            </div>
+            <p>已猜过的字：{{guessedChars}}</p>
+            <p>已猜字次数：{{guessCount}}</p>
+        </div>
+        <div class="input-container">
+            <input type="text" id="guessInput" maxlength="1" placeholder="输入一个汉字">
+            <button onclick="submitGuess()">猜！</button>
+        </div>
+        <button class="next-button" onclick="showAnswer()">显示答案</button>
+        <button class="next-button" onclick="nextSong()">下一首歌</button>
+    </div>
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        document.getElementById('guessInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitGuess();
+            }
+        });
+
+        function submitGuess() {
+            const input = document.getElementById('guessInput');
+            const char = input.value.trim();
+            if (char) {
+                vscode.postMessage({
+                    command: 'guess',
+                    text: char[0]
+                });
+                input.value = '';
+            }
+        }
+
+        function nextSong() {
+            vscode.postMessage({
+                command: 'next'
+            });
+        }
+
+        function showAnswer() {
+            vscode.postMessage({
+                command: 'showAnswer'
+            });
+        }
+
+        function searchArtist() {
+            const input = document.getElementById('artistInput');
+            const artist = input.value.trim();
+            if (artist) {
+                vscode.postMessage({
+                    command: 'searchArtist',
+                    text: artist
+                });
+                input.value = '';
+            }
+        }
+        
+        function clearArtist() {
+            vscode.postMessage({
+                command: 'clearArtist'
+            });
+        }
+    </script>
+</body>
+</html>

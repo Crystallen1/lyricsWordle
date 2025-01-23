@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { Song, getRandomSong, loadSongs, getSongFromArtist } from './songDatabase';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export function activate(context: vscode.ExtensionContext) {
     // 加载歌曲数据
@@ -58,7 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
                         guessCount: 0
                     };
                     
-                    updateGameView();
+                    updateGameView(context);
                 } else if (message.command === 'guess' && currentGame) {
                     const char = message.text;
                     
@@ -81,7 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
                             currentGame.maskedName = currentGame.song.name;
                             currentGame.maskedArtist = currentGame.song.artist;
                             currentGame.maskedLyrics = currentGame.song.lyric;
-                            updateGameView();
+                            updateGameView(context);
                             
                             await vscode.window.showInformationMessage(
                                 `恭喜你猜出了歌名：${currentGame.song.name}！共猜了 ${currentGame.guessCount} 次。`
@@ -91,13 +93,13 @@ export function activate(context: vscode.ExtensionContext) {
                     } else {
                         vscode.window.showInformationMessage(`字符 "${char}" 不存在！`);
                     }
-                    updateGameView();
+                    updateGameView(context);
                 } else if (message.command === 'showAnswer' && currentGame) {
                     // 显示完整答案
                     currentGame.maskedName = currentGame.song.name;
                     currentGame.maskedArtist = currentGame.song.artist;
                     currentGame.maskedLyrics = currentGame.song.lyric;
-                    updateGameView();
+                    updateGameView(context);
                     
                     await vscode.window.showInformationMessage(
                         `答案是：${currentGame.song.name} - ${currentGame.song.artist}`
@@ -121,7 +123,7 @@ export function activate(context: vscode.ExtensionContext) {
                             guessedChars: new Set(),
                             guessCount: 0
                         };
-                        updateGameView();
+                        updateGameView(context);
                     } else {
                         await vscode.window.showInformationMessage(
                             `未找到歌手 "${artist}" 的歌曲`
@@ -137,181 +139,27 @@ export function activate(context: vscode.ExtensionContext) {
             context.subscriptions
         );
 
-        function updateGameView() {
+        function updateGameView(context: vscode.ExtensionContext) {
             if (!currentGame) return;
             
+            const templatePath = path.join(context.extensionPath,'src', 'template.html');
             const formatText = (text: string) => text.replace(/\n/g, '<br>').trim();
-            
-            panel.webview.html = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body { 
-                            padding: 20px; 
-                            background-color: #1e1e1e;
-                            color: #ffffff;
-                        }
-                        .game-container { 
-                            max-width: 800px; 
-                            margin: 0 auto; 
-                        }
-                        .input-container { 
-                            margin: 20px 0; 
-                        }
-                        input { 
-                            padding: 5px; 
-                            font-size: 16px;
-                            background-color: #2d2d2d;
-                            color: #ffffff;
-                            border: 1px solid #3d3d3d;
-                        }
-                        button { 
-                            padding: 5px 10px; 
-                            margin-left: 10px;
-                            background-color: #0e639c;
-                            color: white;
-                            border: none;
-                            cursor: pointer;
-                        }
-                        button:hover {
-                            background-color: #1177bb;
-                        }
-                        .masked-text { 
-                            font-size: 18px; 
-                            line-height: 1.6;
-                            white-space: pre-wrap;
-                        }
-                        .next-button { 
-                            display: block; 
-                            margin: 20px 0;
-                            padding: 10px 20px;
-                            background-color: #0e639c;
-                            color: white;
-                            border: none;
-                            cursor: pointer;
-                        }
-                        .next-button:hover {
-                            background-color: #1177bb;
-                        }
-                        .lyrics-container {
-                            margin: 20px 0;
-                            padding: 15px;
-                            background-color: #2d2d2d;
-                            border-radius: 5px;
-                            border: 1px solid #3d3d3d;
-                            text-align: left;
-                        }
-                        .lyrics-text {
-                            margin: 0;
-                            padding: 0;
-                            line-height: 1.6;
-                        }
-                        h2 {
-                            color: #cccccc;
-                        }
-                        .search-container {
-                            margin: 20px 0;
-                            display: flex;
-                            gap: 10px;
-                        }
-                        .current-artist {
-                            margin: 10px 0;
-                            color: #0e639c;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="game-container">
-                        <h2>猜歌词游戏</h2>
-                        ${currentArtist ? 
-                            `<div class="current-artist">当前歌手：${currentArtist}</div>` : 
-                            ''
-                        }
-                        <div class="search-container">
-                            <input type="text" id="artistInput" placeholder="输入歌手名字">
-                            <button onclick="searchArtist()">搜索歌手</button>
-                            ${currentArtist ? 
-                                `<button onclick="clearArtist()">清除筛选</button>` : 
-                                ''
-                            }
-                        </div>
-                        <div class="masked-text">
-                            <p>歌曲编号：${currentGame.song.id}</p>
-                            <p>歌名：${currentGame.maskedName}</p>
-                            <p>歌手：${currentGame.maskedArtist}</p>
-                            <div class="lyrics-container">
-                                <div class="lyrics-text">
-                                    ${formatText(currentGame.maskedLyrics)}
-                                </div>
-                            </div>
-                            <p>已猜过的字：${Array.from(currentGame.guessedChars).join(', ')}</p>
-                            <p>已猜字次数：${currentGame.guessCount}</p>
-                        </div>
-                        <div class="input-container">
-                            <input type="text" id="guessInput" maxlength="1" placeholder="输入一个汉字">
-                            <button onclick="submitGuess()">猜！</button>
-                        </div>
-                        <button class="next-button" onclick="showAnswer()">显示答案</button>
-                        <button class="next-button" onclick="nextSong()">下一首歌</button>
-                    </div>
-                    <script>
-                        const vscode = acquireVsCodeApi();
-                        
-                        document.getElementById('guessInput').addEventListener('keypress', (e) => {
-                            if (e.key === 'Enter') {
-                                submitGuess();
-                            }
-                        });
-
-                        function submitGuess() {
-                            const input = document.getElementById('guessInput');
-                            const char = input.value.trim();
-                            if (char) {
-                                vscode.postMessage({
-                                    command: 'guess',
-                                    text: char[0]
-                                });
-                                input.value = '';
-                            }
-                        }
-
-                        function nextSong() {
-                            vscode.postMessage({
-                                command: 'next'
-                            });
-                        }
-
-                        function showAnswer() {
-                            vscode.postMessage({
-                                command: 'showAnswer'
-                            });
-                        }
-
-                        function searchArtist() {
-                            const input = document.getElementById('artistInput');
-                            const artist = input.value.trim();
-                            if (artist) {
-                                vscode.postMessage({
-                                    command: 'searchArtist',
-                                    text: artist
-                                });
-                                input.value = '';
-                            }
-                        }
-                        
-                        function clearArtist() {
-                            vscode.postMessage({
-                                command: 'clearArtist'
-                            });
-                        }
-                    </script>
-                </body>
-                </html>
-            `;
+            let html = fs.readFileSync(templatePath, 'utf-8');
+            html = html.replace('{{currentArtist}}', currentArtist ? 
+                `<div class="current-artist">当前歌手：${currentArtist}</div>` : '')
+                .replace('{{clearArtistButton}}', currentArtist ? 
+                    `<button onclick="clearArtist()">清除筛选</button>` : '')
+                .replace('{{songId}}', currentGame.song.id.toString())
+                .replace('{{maskedName}}', currentGame.maskedName)
+                .replace('{{maskedArtist}}', currentGame.maskedArtist)
+                .replace('{{maskedLyrics}}', formatText(currentGame.maskedLyrics))
+                .replace('{{guessedChars}}', Array.from(currentGame.guessedChars).join(', '))
+                .replace('{{guessCount}}', currentGame.guessCount.toString());
+        
+            panel.webview.html = html;
         }
 
-        updateGameView();
+        updateGameView(context);
     });
 
     context.subscriptions.push(disposable);
