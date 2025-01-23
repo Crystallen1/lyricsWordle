@@ -74,6 +74,38 @@
             margin: 10px 0;
             color: #0e639c;
         }
+        .song-info {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+        
+        .song-info p {
+            margin: 0;
+            flex: 1;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .button-group .next-button {
+            margin: 0;  /* 覆盖原来的 margin */
+            flex: 1;
+        }
+        
+        .guess-info {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+        
+        .guess-info p {
+            margin: 0;
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -86,23 +118,30 @@
             {{clearArtistButton}}
         </div>
         <div class="masked-text">
-            <p>歌曲编号：{{songId}}</p>
-            <p>歌名：{{maskedName}}</p>
-            <p>歌手：{{maskedArtist}}</p>
+            <div class="song-info">
+                <p>歌曲编号：{{songId}}</p>
+                <p>歌名：{{maskedName}}</p>
+                <p>歌手：{{maskedArtist}}</p>
+            </div>
             <div class="lyrics-container">
                 <div class="lyrics-text">
                     {{maskedLyrics}}
                 </div>
             </div>
-            <p>已猜过的字：{{guessedChars}}</p>
-            <p>已猜字次数：{{guessCount}}</p>
+            <div class="guess-info">
+                <p>已猜过的字：{{guessedChars}}</p>
+                <p>已猜字次数：{{guessCount}}</p>
+            </div>
         </div>
         <div class="input-container">
             <input type="text" id="guessInput" maxlength="1" placeholder="输入一个汉字">
             <button onclick="submitGuess()">猜！</button>
         </div>
-        <button class="next-button" onclick="showAnswer()">显示答案</button>
-        <button class="next-button" onclick="nextSong()">下一首歌</button>
+        <div class="button-group">
+            <button class="next-button" onclick="showAnswer()">显示答案</button>
+            <button class="next-button" onclick="showArtist()">显示歌手</button>
+            <button class="next-button" onclick="nextSong()">下一首歌</button>
+        </div>
     </div>
     <script>
         const vscode = acquireVsCodeApi();
@@ -152,6 +191,12 @@
         function clearArtist() {
             vscode.postMessage({
                 command: 'clearArtist'
+            });
+        }
+
+        function showArtist() {
+            vscode.postMessage({
+                command: 'showArtist'
             });
         }
     </script>

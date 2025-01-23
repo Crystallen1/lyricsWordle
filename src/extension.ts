@@ -104,6 +104,14 @@ export function activate(context: vscode.ExtensionContext) {
                     await vscode.window.showInformationMessage(
                         `答案是：${currentGame.song.name} - ${currentGame.song.artist}`
                     );
+                } else if (message.command === 'showArtist' && currentGame) {
+                    // 只显示歌手名字
+                    currentGame.maskedArtist = currentGame.song.artist;
+                    updateGameView(context);
+                    
+                    await vscode.window.showInformationMessage(
+                        `歌手是：${currentGame.song.artist}`
+                    );
                 } else if (message.command === 'searchArtist') {
                     const artist = message.text.trim();
                     const songs = getSongFromArtist(artist);
