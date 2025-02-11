@@ -150,6 +150,7 @@
             <button class="next-button" onclick="showArtist()">显示歌手</button>
             <button class="next-button" onclick="getHint()">获取提示</button>
             <button class="next-button" onclick="nextSong()">下一首歌</button>
+            <button class="next-button" onclick="showLeaderboard()">查看排行榜</button>
         </div>
     </div>
     <script>
@@ -212,6 +213,12 @@
         function getHint() {
             vscode.postMessage({
                 command: 'getHint'
+            });
+        }
+
+        function showLeaderboard() {
+            vscode.postMessage({
+                command: 'showLeaderboard'
             });
         }
     </script>

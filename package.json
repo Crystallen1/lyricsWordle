@@ -2,7 +2,7 @@
     "name": "lyrics-guess-game",
     "displayName": "猜歌词游戏",
     "description": "一个趣味猜歌词的 VS Code 游戏插件",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "engines": {
         "vscode": "^1.60.0"
     },
@@ -30,6 +30,7 @@
     "files": [
         "out/**/*",
         "src/template.html",
+        "src/leaderboard.html",
         "src/data/**/*"
     ]
 } 

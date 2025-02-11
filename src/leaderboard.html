@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #1e1e1e;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        .leaderboard-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .filter-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        input {
+            padding: 5px;
+            font-size: 16px;
+            background-color: #2d2d2d;
+            color: #ffffff;
+            border: 1px solid #3d3d3d;
+        }
+        
+        button {
+            padding: 5px 10px;
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #1177bb;
+        }
+        
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .records-table th,
+        .records-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #3d3d3d;
+        }
+        
+        .records-table th {
+            background-color: #2d2d2d;
+            font-weight: bold;
+        }
+        
+        .records-table tr:hover {
+            background-color: #2d2d2d;
+        }
+        
+        .rank {
+            font-weight: bold;
+            color: #0e639c;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #2d2d2d;
+            border-radius: 5px;
+        }
+        
+        .stat-card {
+            padding: 15px;
+            background-color: #3d3d3d;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0e639c;
+        }
+        
+        .stat-label {
+            margin-top: 5px;
+            color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="leaderboard-container">
+        <div class="header">
+            <h2>猜歌词游戏排行榜</h2>
+            <button onclick="backToGame()">返回游戏</button>
+        </div>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value">{{totalSongs}}</div>
+                <div class="stat-label">已完成歌曲数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{averageGuesses}}</div>
+                <div class="stat-label">平均猜测次数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{bestRecord}}</div>
+                <div class="stat-label">最佳记录</div>
+            </div>
+        </div>
+        
+        <div class="filter-container">
+            <input type="text" id="searchInput" placeholder="搜索歌名或歌手" oninput="filterRecords()">
+            <select id="sortSelect" onchange="sortRecords()">
+                <option value="guesses">按猜测次数排序</option>
+                <option value="time">按完成时间排序</option>
+            </select>
+        </div>
+        
+        <table class="records-table">
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>歌名</th>
+                    <th>歌手</th>
+                    <th>猜测次数</th>
+                    <th>完成时间</th>
+                </tr>
+            </thead>
+            <tbody id="recordsBody">
+                {{#each records}}
+                <tr>
+                    <td class="rank">{{rank}}</td>
+                    <td>{{songName}}</td>
+                    <td>{{artist}}</td>
+                    <td>{{guesses}}</td>
+                    <td>{{timestamp}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        function backToGame() {
+            vscode.postMessage({ command: 'backToGame' });
+        }
+        
+        function filterRecords() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            vscode.postMessage({ 
+                command: 'filterRecords',
+                text: searchText
+            });
+        }
+        
+        function sortRecords() {
+            const sortBy = document.getElementById('sortSelect').value;
+            vscode.postMessage({ 
+                command: 'sortRecords',
+                sortBy: sortBy
+            });
+        }
+    </script>
+</body>
+</html> 

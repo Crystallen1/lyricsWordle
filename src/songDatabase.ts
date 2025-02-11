@@ -9,7 +9,7 @@ export interface Song {
     lyric: string;
 }
 
-let songs: Song[] = [];
+export let songs: Song[] = [];
 
 // 加载歌曲数据
 export function loadSongs(context: vscode.ExtensionContext): void {

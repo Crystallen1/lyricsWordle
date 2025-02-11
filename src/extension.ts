@@ -1,9 +1,18 @@
 import * as vscode from 'vscode';
-import { Song, getRandomSong, loadSongs, getSongFromArtist } from './songDatabase';
+import { Song, getRandomSong, loadSongs, getSongFromArtist, songs } from './songDatabase';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Leaderboard, LeaderboardRecord } from './leaderboard';
+
+// 在文件顶部添加全局变量
+let gamePanel: vscode.WebviewPanel | undefined;
+let leaderboardPanel: vscode.WebviewPanel | undefined;
+let leaderboard: Leaderboard;
 
 export function activate(context: vscode.ExtensionContext) {
+    // 初始化排行榜
+    leaderboard = new Leaderboard(context);
+    
     // 加载歌曲数据
     loadSongs(context);
     
@@ -17,6 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
         maskedLyrics: string;
         guessedChars: Set<string>;
         guessCount: number;
+        isArtistRevealed: boolean;
     } | undefined;
 
     let disposable = vscode.commands.registerCommand('lyrics-guess.startGame', async () => {
@@ -30,7 +40,8 @@ export function activate(context: vscode.ExtensionContext) {
             maskedArtist: maskText(song.artist),
             maskedLyrics: maskText(song.lyric),
             guessedChars: new Set(),
-            guessCount: 0
+            guessCount: 0,
+            isArtistRevealed: false
         };
 
         const panel = vscode.window.createWebviewPanel(
@@ -45,19 +56,18 @@ export function activate(context: vscode.ExtensionContext) {
         panel.webview.onDidReceiveMessage(
             async message => {
                 if (message.command === 'next') {
-                    // 获取新歌曲，根据是否有选中歌手来决定
                     const song = currentArtist ? 
                         getRandomSong(currentArtist) : 
                         getRandomSong();
                     
-                    // 重置游戏状态
                     currentGame = {
                         song,
                         maskedName: maskText(song.name),
                         maskedArtist: maskText(song.artist),
                         maskedLyrics: maskText(song.lyric),
                         guessedChars: new Set(),
-                        guessCount: 0
+                        guessCount: 0,
+                        isArtistRevealed: false
                     };
                     
                     updateGameView(context);
@@ -75,7 +85,9 @@ export function activate(context: vscode.ExtensionContext) {
                         currentGame.song.lyric.includes(char)) {
                         
                         currentGame.maskedName = revealChar(currentGame.song.name, char, currentGame.guessedChars);
-                        currentGame.maskedArtist = revealChar(currentGame.song.artist, char, currentGame.guessedChars);
+                        currentGame.maskedArtist = currentGame.isArtistRevealed ? 
+                            currentGame.song.artist : 
+                            revealChar(currentGame.song.artist, char, currentGame.guessedChars);
                         currentGame.maskedLyrics = revealChar(currentGame.song.lyric, char, currentGame.guessedChars);
 
                         if (!currentGame.maskedName.includes('□')) {
@@ -83,11 +95,22 @@ export function activate(context: vscode.ExtensionContext) {
                             currentGame.maskedName = currentGame.song.name;
                             currentGame.maskedArtist = currentGame.song.artist;
                             currentGame.maskedLyrics = currentGame.song.lyric;
+                            
+                            // 更新排行榜
+                            const isNewRecord = leaderboard.updateScore(currentGame.song.id, currentGame.guessCount);
+                            const rank = leaderboard.getSongRank(currentGame.song.id);
+                            
                             updateGameView(context);
                             
-                            await vscode.window.showInformationMessage(
-                                `恭喜你猜出了歌名：${currentGame.song.name}！共猜了 ${currentGame.guessCount} 次。`
-                            );
+                            let message = `恭喜你猜出了歌名：${currentGame.song.name}！共猜了 ${currentGame.guessCount} 次。`;
+                            if (isNewRecord) {
+                                message += ' 创造了新纪录！';
+                            }
+                            if (rank > 0) {
+                                message += ` 当前排名第 ${rank} 名。`;
+                            }
+                            
+                            await vscode.window.showInformationMessage(message);
                             return;
                         }
                     } else {
@@ -105,7 +128,7 @@ export function activate(context: vscode.ExtensionContext) {
                         `答案是：${currentGame.song.name} - ${currentGame.song.artist}`
                     );
                 } else if (message.command === 'showArtist' && currentGame) {
-                    // 只显示歌手名字
+                    currentGame.isArtistRevealed = true;
                     currentGame.maskedArtist = currentGame.song.artist;
                     updateGameView(context);
                     
@@ -129,7 +152,8 @@ export function activate(context: vscode.ExtensionContext) {
                             maskedArtist: maskText(song.artist),
                             maskedLyrics: maskText(song.lyric),
                             guessedChars: new Set(),
-                            guessCount: 0
+                            guessCount: 0,
+                            isArtistRevealed: false
                         };
                         updateGameView(context);
                     } else {
@@ -174,6 +198,8 @@ export function activate(context: vscode.ExtensionContext) {
                     } else {
                         await vscode.window.showInformationMessage('没有更多可提示的字符了！');
                     }
+                } else if (message.command === 'showLeaderboard') {
+                    showLeaderboard(context);
                 }
             },
             undefined,
@@ -195,7 +221,11 @@ export function activate(context: vscode.ExtensionContext) {
                 .replace('{{maskedArtist}}', currentGame.maskedArtist)
                 .replace('{{maskedLyrics}}', formatText(currentGame.maskedLyrics))
                 .replace('{{guessedChars}}', Array.from(currentGame.guessedChars).join(', '))
-                .replace('{{guessCount}}', currentGame.guessCount.toString());
+                .replace('{{guessCount}}', currentGame.guessCount.toString())
+                .replace('</div>', `
+                    <button class="next-button" onclick="showLeaderboard()">查看排行榜</button>
+                </div>
+            `);
         
             panel.webview.html = html;
         }
@@ -220,6 +250,84 @@ function revealChar(text: string, char: string, guessedChars: Set<string>): stri
             `<span class="char-box">${c}</span>` : 
             (c.match(/[\u4e00-\u9fa5a-zA-Z]/) ? '<span class="char-box">□</span>' : c)
     ).join('');
+}
+
+function showLeaderboard(context: vscode.ExtensionContext) {
+    if (leaderboardPanel) {
+        leaderboardPanel.reveal();
+        return;
+    }
+
+    leaderboardPanel = vscode.window.createWebviewPanel(
+        'lyricsLeaderboard',
+        '猜歌词游戏排行榜',
+        vscode.ViewColumn.One,
+        {
+            enableScripts: true
+        }
+    );
+
+    // 创建歌曲数据库 Map
+    const songDatabase = new Map(songs.map(song => [
+        song.id,
+        { name: song.name, artist: song.artist }
+    ]));
+
+    function updateLeaderboardView(searchText: string = '', sortBy: 'guesses' | 'time' = 'guesses') {
+        const stats = leaderboard.getStats();
+        const records = leaderboard.getFormattedRecords(songDatabase, searchText, sortBy);
+        
+        const templatePath = path.join(context.extensionPath, 'src', 'leaderboard.html');
+        let html = fs.readFileSync(templatePath, 'utf-8');
+        
+        // 替换模板变量
+        html = html
+            .replace('{{totalSongs}}', stats.totalSongs.toString())
+            .replace('{{averageGuesses}}', stats.averageGuesses.toString())
+            .replace('{{bestRecord}}', stats.bestRecord.toString())
+            .replace('{{#each records}}', '')
+            .replace('{{/each}}', '');
+
+        // 插入记录
+        const recordsHtml = records.map((record: LeaderboardRecord) => `
+            <tr>
+                <td class="rank">${record.rank}</td>
+                <td>${record.songName}</td>
+                <td>${record.artist}</td>
+                <td>${record.guesses}</td>
+                <td>${record.timestamp}</td>
+            </tr>
+        `).join('');
+
+        html = html.replace('<tbody id="recordsBody">', `<tbody id="recordsBody">${recordsHtml}`);
+        
+        leaderboardPanel!.webview.html = html;
+    }
+
+    leaderboardPanel.webview.onDidReceiveMessage(
+        async message => {
+            switch (message.command) {
+                case 'backToGame':
+                    leaderboardPanel?.dispose();
+                    gamePanel?.reveal();
+                    break;
+                case 'filterRecords':
+                    updateLeaderboardView(message.text, message.sortBy);
+                    break;
+                case 'sortRecords':
+                    updateLeaderboardView(message.searchText, message.sortBy);
+                    break;
+            }
+        },
+        undefined,
+        context.subscriptions
+    );
+
+    leaderboardPanel.onDidDispose(() => {
+        leaderboardPanel = undefined;
+    });
+
+    updateLeaderboardView();
 }
 
 export function deactivate() {}
