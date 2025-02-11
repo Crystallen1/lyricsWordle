@@ -141,6 +141,39 @@ export function activate(context: vscode.ExtensionContext) {
                     currentArtist = undefined;
                     await vscode.window.showInformationMessage('已清除歌手筛选');
                     
+                } else if (message.command === 'getHint' && currentGame) {
+                    // 获取一个未显示的字符作为提示
+                    const allChars = new Set([
+                        ...currentGame.song.name.split(''),
+                        ...currentGame.song.artist.split(''),
+                        ...currentGame.song.lyric.split('')
+                    ]);
+                    
+                    // 过滤掉已经猜过的字符和非中文字符
+                    const availableChars = Array.from(allChars).filter(char => 
+                        !currentGame!.guessedChars.has(char) && 
+                        /[\u4e00-\u9fa5]/.test(char)
+                    );
+                    
+                    if (availableChars.length > 0) {
+                        // 随机选择一个未显示的字符
+                        const hintChar = availableChars[Math.floor(Math.random() * availableChars.length)];
+                        
+                        // 更新游戏状态
+                        currentGame.guessedChars.add(hintChar);
+                        currentGame.guessCount++;
+                        
+                        // 更新显示
+                        currentGame.maskedName = revealChar(currentGame.song.name, hintChar, currentGame.guessedChars);
+                        currentGame.maskedArtist = revealChar(currentGame.song.artist, hintChar, currentGame.guessedChars);
+                        currentGame.maskedLyrics = revealChar(currentGame.song.lyric, hintChar, currentGame.guessedChars);
+                        
+                        updateGameView(context);
+                        
+                        await vscode.window.showInformationMessage(`提示：字符 "${hintChar}"`);
+                    } else {
+                        await vscode.window.showInformationMessage('没有更多可提示的字符了！');
+                    }
                 }
             },
             undefined,
@@ -175,13 +208,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 // 将文本转换为遮罩（方框）
 function maskText(text: string): string {
-    return text.replace(/[\u4e00-\u9fa5a-zA-Z]/g, '□');
+    return text.split('').map(c => 
+        c.match(/[\u4e00-\u9fa5a-zA-Z]/) ? '<span class="char-box">□</span>' : c
+    ).join('');
 }
 
 // 显示已猜中的字符
 function revealChar(text: string, char: string, guessedChars: Set<string>): string {
     return text.split('').map(c => 
-        guessedChars.has(c) ? c : (c.match(/[\u4e00-\u9fa5a-zA-Z]/) ? '□' : c)
+        guessedChars.has(c) ? 
+            `<span class="char-box">${c}</span>` : 
+            (c.match(/[\u4e00-\u9fa5a-zA-Z]/) ? '<span class="char-box">□</span>' : c)
     ).join('');
 }
 

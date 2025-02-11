@@ -36,6 +36,7 @@
             font-size: 18px; 
             line-height: 1.6;
             white-space: pre-wrap;
+            font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "SimHei", monospace;
         }
         .next-button { 
             display: block; 
@@ -106,6 +107,13 @@
             margin: 0;
             flex: 1;
         }
+        
+        .char-box {
+            display: inline-block;
+            width: 1em;
+            text-align: center;
+            font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "SimHei", monospace;
+        }
     </style>
 </head>
 <body>
@@ -140,6 +148,7 @@
         <div class="button-group">
             <button class="next-button" onclick="showAnswer()">显示答案</button>
             <button class="next-button" onclick="showArtist()">显示歌手</button>
+            <button class="next-button" onclick="getHint()">获取提示</button>
             <button class="next-button" onclick="nextSong()">下一首歌</button>
         </div>
     </div>
@@ -197,6 +206,12 @@
         function showArtist() {
             vscode.postMessage({
                 command: 'showArtist'
+            });
+        }
+
+        function getHint() {
+            vscode.postMessage({
+                command: 'getHint'
             });
         }
     </script>
